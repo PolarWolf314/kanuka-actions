@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Kanuka
-        uses: PolarWolf314/kanuka-action@v1
+        uses: PolarWolf314/kanuka-actions@v1
         with:
           private-key: ${{ secrets.KANUKA_PRIVATE_KEY }}
 
@@ -53,7 +53,7 @@ After running this action, the following environment variables are available:
 ### Basic decryption
 
 ```yaml
-- uses: PolarWolf314/kanuka-action@v1
+- uses: PolarWolf314/kanuka-actions@v1
   with:
     private-key: ${{ secrets.KANUKA_PRIVATE_KEY }}
 
@@ -63,7 +63,7 @@ After running this action, the following environment variables are available:
 ### With passphrase-protected key
 
 ```yaml
-- uses: PolarWolf314/kanuka-action@v1
+- uses: PolarWolf314/kanuka-actions@v1
   with:
     private-key: ${{ secrets.KANUKA_PRIVATE_KEY }}
     passphrase: ${{ secrets.KANUKA_PASSPHRASE }}
@@ -74,7 +74,7 @@ After running this action, the following environment variables are available:
 ### Pin to specific version
 
 ```yaml
-- uses: PolarWolf314/kanuka-action@v1
+- uses: PolarWolf314/kanuka-actions@v1
   with:
     private-key: ${{ secrets.KANUKA_PRIVATE_KEY }}
     version: '1.2.0'

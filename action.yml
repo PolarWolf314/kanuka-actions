@@ -73,7 +73,7 @@ runs:
         OS_NAME: ${{ steps.platform.outputs.os }}
         ARCH_NAME: ${{ steps.platform.outputs.arch }}
       run: |
-        ARCHIVE="kanuka_${VERSION}_${OS_NAME}_${ARCH_NAME}.tar.gz"
+        ARCHIVE="kanuka_${OS_NAME}_${ARCH_NAME}.tar.gz"
         URL="https://github.com/PolarWolf314/kanuka/releases/download/v${VERSION}/${ARCHIVE}"
         
         echo "Downloading $URL"
