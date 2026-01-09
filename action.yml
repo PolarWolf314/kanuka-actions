@@ -1,0 +1,117 @@
+name: 'Setup Kanuka'
+description: 'Set up Kanuka CLI for encrypted secrets management in GitHub Actions'
+author: 'PolarWolf314'
+
+branding:
+  icon: 'lock'
+  color: 'green'
+
+inputs:
+  private-key:
+    description: 'Private key content for decryption (from GitHub Secrets)'
+    required: true
+  passphrase:
+    description: 'Passphrase for the private key, if encrypted'
+    required: false
+    default: ''
+  version:
+    description: 'Kanuka version to install (e.g., "1.2.0" or "latest")'
+    required: false
+    default: 'latest'
+
+outputs:
+  private-key-path:
+    description: 'Path to the private key file (for use with --private-key-stdin)'
+    value: ${{ steps.setup-key.outputs.key-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Detect platform
+      id: platform
+      shell: bash
+      run: |
+        OS=$(uname -s)
+        ARCH=$(uname -m)
+        
+        case "$OS" in
+          Linux)  OS_NAME="Linux" ;;
+          Darwin) OS_NAME="Darwin" ;;
+          *)      echo "::error::Unsupported OS: $OS"; exit 1 ;;
+        esac
+        
+        case "$ARCH" in
+          x86_64)  ARCH_NAME="x86_64" ;;
+          aarch64) ARCH_NAME="arm64" ;;
+          arm64)   ARCH_NAME="arm64" ;;
+          i386)    ARCH_NAME="i386" ;;
+          i686)    ARCH_NAME="i386" ;;
+          *)       echo "::error::Unsupported architecture: $ARCH"; exit 1 ;;
+        esac
+        
+        echo "os=$OS_NAME" >> "$GITHUB_OUTPUT"
+        echo "arch=$ARCH_NAME" >> "$GITHUB_OUTPUT"
+
+    - name: Get version
+      id: version
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+      run: |
+        if [ "$INPUT_VERSION" = "latest" ]; then
+          VERSION=$(curl -fsSL https://api.github.com/repos/PolarWolf314/kanuka/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+        else
+          VERSION="${INPUT_VERSION#v}"
+        fi
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "Installing Kanuka v$VERSION"
+
+    - name: Install Kanuka
+      shell: bash
+      env:
+        VERSION: ${{ steps.version.outputs.version }}
+        OS_NAME: ${{ steps.platform.outputs.os }}
+        ARCH_NAME: ${{ steps.platform.outputs.arch }}
+      run: |
+        ARCHIVE="kanuka_${VERSION}_${OS_NAME}_${ARCH_NAME}.tar.gz"
+        URL="https://github.com/PolarWolf314/kanuka/releases/download/v${VERSION}/${ARCHIVE}"
+        
+        echo "Downloading $URL"
+        curl -fsSL "$URL" -o kanuka.tar.gz
+        tar -xzf kanuka.tar.gz
+        
+        sudo mv kanuka /usr/local/bin/kanuka
+        sudo chmod +x /usr/local/bin/kanuka
+        rm kanuka.tar.gz
+        
+        echo "Kanuka $(kanuka --version) installed successfully"
+
+    - name: Mask secrets
+      shell: bash
+      env:
+        PRIVATE_KEY: ${{ inputs.private-key }}
+        PASSPHRASE: ${{ inputs.passphrase }}
+      run: |
+        # Mask the entire private key content
+        echo "::add-mask::$PRIVATE_KEY"
+        if [ -n "$PASSPHRASE" ]; then
+          echo "::add-mask::$PASSPHRASE"
+        fi
+
+    - name: Setup private key
+      id: setup-key
+      shell: bash
+      env:
+        PRIVATE_KEY: ${{ inputs.private-key }}
+        PASSPHRASE: ${{ inputs.passphrase }}
+      run: |
+        KEY_PATH="${RUNNER_TEMP}/kanuka-private-key"
+        echo "$PRIVATE_KEY" > "$KEY_PATH"
+        chmod 600 "$KEY_PATH"
+        
+        echo "key-path=$KEY_PATH" >> "$GITHUB_OUTPUT"
+        echo "KANUKA_PRIVATE_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+        
+        if [ -n "$PASSPHRASE" ]; then
+          echo "KANUKA_PASSPHRASE=$PASSPHRASE" >> "$GITHUB_ENV"
+        fi

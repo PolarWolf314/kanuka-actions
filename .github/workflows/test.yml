@@ -1,0 +1,57 @@
+name: Test Action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test action setup
+        uses: ./
+        with:
+          private-key: ${{ secrets.TEST_PRIVATE_KEY }}
+          version: 'latest'
+
+      - name: Verify installation
+        run: |
+          kanuka --version
+          echo "Kanuka installed successfully"
+
+      - name: Verify key path is set
+        run: |
+          if [ -z "$KANUKA_PRIVATE_KEY_PATH" ]; then
+            echo "::error::KANUKA_PRIVATE_KEY_PATH not set"
+            exit 1
+          fi
+          
+          if [ ! -f "$KANUKA_PRIVATE_KEY_PATH" ]; then
+            echo "::error::Private key file does not exist"
+            exit 1
+          fi
+          
+          echo "Private key configured at $KANUKA_PRIVATE_KEY_PATH"
+
+  test-version-pin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test pinned version
+        uses: ./
+        with:
+          private-key: ${{ secrets.TEST_PRIVATE_KEY }}
+          version: '1.2.0'
+
+      - name: Verify version
+        run: |
+          VERSION=$(kanuka --version)
+          echo "Installed version: $VERSION"
